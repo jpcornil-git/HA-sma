@@ -1,0 +1,24 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Equipement déjà configuré",
+      "already_in_progress": "Configuration déjà en cours"
+    },
+    "error": {
+      "invalid_host": "Adresse IP invalide",
+      "cannot_connect": "Impossible de se connecter",
+      "unknown": "Erreur inattendue"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "ip_address": "Adresse IP",
+          "port": "Port UDP",
+          "scan_interval": "Intervalle de mise à jour (secondes)"
+        },
+        "description": "Paramètres de communication.",
+        "title": "Configurer la WebBox SMA"
+      }
+    }
+  }
+}
