@@ -1,7 +1,9 @@
 # HA-sma
 SMA Sunny Webbox integration for Home Assistant
 
-Tested against Sunny WebBox-20 (using a Bluetooth connection with the inverter) running FW 01.05.08.R 
+![webbox](https://user-images.githubusercontent.com/40644331/149579494-a5604e3b-8070-4c93-9a84-002c93e80e79.png)
+
+**Note**: Tested against Sunny WebBox-20 running FW 01.05.08.R (using a Bluetooth connection with the inverter) 
 
 ## Highlights of what it does offer
 
@@ -52,7 +54,7 @@ This script implements the main object used by HomeAssistant but can also be use
 - display data fetched from webbox in a terminal
 - extend capabilities/debug issues outside of HomeAssistant
 
-Note: Tested with/develpped for python3.9 (mandated by HomeAssistant from 2022.1)
+**Note**: Tested with/developped for python3.9 (mandated by HomeAssistant from 2022.1)
 
 ```bash
 python3 custom_components/sma/sma_webbox.py <webbox ip_address>
