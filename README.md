@@ -5,8 +5,8 @@ Tested against Sunny WebBox-20 (using a Bluetooth connection with the inverter) 
 
 ## Highlights of what it does offer
 
-- Poll Sunny Webbox using rpc [API v1.4](https://github.com/jpcornil-git/HA-sma/Sunny-Webbox-remote-procedure-call-User-manual-v1.4.pdf) 
-- Create HA sensors for all reported channels and sources, e.g. in my case:
+- Poll Sunny Webbox using rpc [API v1.4](https://github.com/jpcornil-git/HA-sma/blob/main/Sunny-Webbox-remote-procedure-call-User-manual-v1.4.pdf)
+- Create HA sensors for all reported channels and sources, e.g. in my setup:
    - Webbox summary ('My Plant') - 5 sensors
    - Inverter - 9 sensors
 - **Config Flow** support (UI configuration) in addition to legacy configuration.yaml.
@@ -43,4 +43,17 @@ sma:
 sma:
   ip_address: 192.168.1.109
 
+```
+
+## sma_webbox.py
+
+This script implements the main object used by HomeAssistant but can also be used as an independent script to:
+- test interoperability with a given webbox before addition to homeassistant
+- display data fetched from webbox in a terminal
+- extend capabilities/debug issues outside of HomeAssistant
+
+Note: Tested with/develpped for python3.9 (mandated by HomeAssistant from 2022.1)
+
+```bash
+python3 custom_components/sma/sma_webbox.py <webbox ip_address>
 ```
