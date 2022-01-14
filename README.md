@@ -24,13 +24,13 @@ SMA Sunny Webbox integration for Home Assistant
 1. Clone or download all files from this repository 
 2. Move custom_components/sma to your <ha_configuration_folder>, e.g. /home/homeassistant/.homeassistant/custom_components/sma
 3. Restart HA and clear browser cache (or restart a browser); latter is required for new config_flow to show up
-4. Add sma component using:
-   - **config flow** (Configuration->Integrations->Add integration) 
+4. Add sma component using either:
+   - **config flow** (Configuration->Integrations->Add integration, search for sma) 
    - **configuration.yaml** see configuration example below.
 5. Created entities will be visible in the **Integrations** tab and aggregated per device in the **Devices** tab.
 6. Enable desired sensor entities via the **Devices** (structured view) or **Entities** tab (flat view).
 
-## Example entry for `configuration.yaml`:
+#### Example entry for `configuration.yaml`:
 
 ```yaml
 # Example configuration.yaml
