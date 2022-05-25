@@ -1,7 +1,5 @@
 {
   "name": "sma",
   "country": "BE",
-  "domains": ["sensor"],
-  "homeassistant": "2021.12.8",
-  "iot_class": ["Local Poll"]
+  "homeassistant": "2021.12.8"
 }
