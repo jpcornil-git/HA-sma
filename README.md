@@ -22,9 +22,9 @@ SMA Sunny Webbox integration for Home Assistant
 ### Update custom_components folder
 
 1. Clone or download all files from this repository 
-2. Move custom_components/sma to your <ha_configuration_folder>, e.g. /home/homeassistant/.homeassistant/custom_components/sma
+2. Move custom_components/sma_webbox to your <ha_configuration_folder>, e.g. /home/homeassistant/.homeassistant/custom_components/sma_webbox
 3. Restart HA and clear browser cache (or restart a browser); latter is required for new config_flow to show up
-4. Add sma component using either:
+4. Add sma_webbox component using either:
    - **config flow** (Configuration->Integrations->Add integration, search for sma) 
    - **configuration.yaml** see configuration example below.
 5. Created entities will be visible in the **Integrations** tab and aggregated per device in the **Devices** tab.
@@ -34,7 +34,7 @@ SMA Sunny Webbox integration for Home Assistant
 
 ```yaml
 # Example configuration.yaml
-sma:
+sma_webbox:
   ip_address: 192.168.1.109
   port: 34268
   scan_interval: 30
@@ -42,7 +42,7 @@ sma:
 ***Note***: Typically, only **ip_address** will be mentionned as illustrated below; I suppose that all devices are using UDP port default (34268) and a scan interval under 30s is probably meaningless as the webbox is not updating faster.
 ```yaml
 # Example configuration.yaml
-sma:
+sma_webbox:
   ip_address: 192.168.1.109
 
 ```
@@ -57,5 +57,5 @@ This script implements the main object used by HomeAssistant but can also be use
 **Note**: Tested with/developped for python3.9 (mandated by HomeAssistant from 2022.1)
 
 ```bash
-python3 custom_components/sma/sma_webbox.py <webbox ip_address>
+python3 custom_components/sma_webbox/sma_webbox.py <webbox ip_address>
 ```

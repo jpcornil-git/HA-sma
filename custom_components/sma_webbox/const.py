@@ -1,5 +1,5 @@
 """Generic constants for SMA webbox integration."""
-DOMAIN = "sma"
+DOMAIN = "sma_webbox"
 
 # Default configuration
 DEFAULT_SCAN_INTERVAL = 30  # seconds

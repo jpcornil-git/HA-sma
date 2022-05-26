@@ -1,5 +1,5 @@
 {
-  "domain": "sma",
+  "domain": "sma_webbox",
   "name": "SMA Webbox",
   "version": "1.0",
   "config_flow": true,
