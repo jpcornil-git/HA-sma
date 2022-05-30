@@ -138,7 +138,8 @@ class WebboxClientProtocol:  # pylint: disable=too-many-instance-attributes
         """Return Webbox response to rpc caller using future."""
         if self._addr[0] == addr[0]:
             data = json.loads(data.decode().replace("\0", ""))
-            self._on_received.set_result(data)
+            if not self._on_received.cancelled():
+                self._on_received.set_result(data)
 
     def error_received(self, exc: Exception) -> None:
         """Close connection upon unexpected errors."""
@@ -226,6 +227,7 @@ class WebboxClientProtocol:  # pylint: disable=too-many-instance-attributes
             _LOGGER.debug(response)
         except asyncio.TimeoutError:
             _LOGGER.warning("RPC request timed out")
+            self._on_received.cancel()
             raise SmaWebboxTimeoutException("RPC request timed out") from None
 
         # Raise exception upon errored response or id mismatch
