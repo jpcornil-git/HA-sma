@@ -1,12 +1,12 @@
 {
   "domain": "sma_webbox",
   "name": "SMA Webbox",
-  "version": "1.0",
-  "config_flow": true,
-  "documentation": "https://github.com/jpcornil-git/HA-sma",
-  "issue_tracker": "https://github.com/jpcornil-git/HA-sma/issues",
-  "dependencies": [],
   "codeowners": ["@jpcornil-git"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/jpcornil-git/HA-sma",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/jpcornil-git/HA-sma/issues",
   "requirements": [],
-  "iot_class": "local_polling"
+  "version": "1.0"
 }
