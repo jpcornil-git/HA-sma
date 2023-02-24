@@ -16,6 +16,11 @@ from homeassistant.const import (
     FREQUENCY_HERTZ,
     POWER_WATT,
     TIME_HOURS,
+    TEMP_CELSIUS,
+    TEMP_KELVIN,
+    TEMP_FAHRENHEIT,
+    ILLUMINANCE,
+    WIND_SPEED,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
@@ -41,6 +46,11 @@ from .sma_webbox import (
     WEBBOX_UNIT_OHMS,
     WEBBOX_UNIT_VOLT,
     WEBBOX_UNIT_WATT,
+    WEBBOX_UNIT_TEMP_CELSIUS,
+    WEBBOX_UNIT_TEMP_KELVIN,
+    WEBBOX_UNIT_TEMP_FAHRENHEIT,
+    WEBBOX_UNIT_WATTS_PER_SQUARE_METER,
+    WEBBOX_UNIT_METERS_PER_SECOND,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -163,6 +173,27 @@ class SMAWebboxSensor(CoordinatorEntity, SensorEntity):
         elif unit == WEBBOX_UNIT_HOURS:
             self._attr_unit_of_measurement = TIME_HOURS
             self._attr_state_class = SensorStateClass.TOTAL_INCREASING
+            self._attr_device_class = SensorDeviceClass.DURATION
+        elif unit == WEBBOX_UNIT_TEMP_CELSIUS:
+            self._attr_unit_of_measurement = TEMP_CELSIUS
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+            self._attr_device_class = SensorDeviceClass.TEMPERATURE
+        elif unit == WEBBOX_UNIT_TEMP_KELVIN:
+            self._attr_unit_of_measurement = TEMP_KELVIN
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+            self._attr_device_class = SensorDeviceClass.TEMPERATURE
+        elif unit == WEBBOX_UNIT_TEMP_FAHRENHEIT:
+            self._attr_unit_of_measurement = TEMP_FAHRENHEIT
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+            self._attr_device_class = SensorDeviceClass.TEMPERATURE
+        elif unit == WEBBOX_UNIT_WATTS_PER_SQUARE_METER:
+            self._attr_unit_of_measurement = ILLUMINANCE
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+            self._attr_device_class = SensorDeviceClass.ILLUMINANCE
+        elif unit == WEBBOX_UNIT_METERS_PER_SECOND:
+            self._attr_unit_of_measurement = WIND_SPEED
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+            self._attr_device_class = SensorDeviceClass.WIND_SPEED
         elif unit == WEBBOX_UNIT_OHMS:
             self._attr_state_class = SensorStateClass.MEASUREMENT
 
