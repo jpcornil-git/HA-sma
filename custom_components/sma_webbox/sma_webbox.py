@@ -137,7 +137,7 @@ class WebboxClientProtocol:  # pylint: disable=too-many-instance-attributes
     def datagram_received(self, data: bytes, addr: Tuple[str, int]) -> None:
         """Return Webbox response to rpc caller using future."""
         if self._addr[0] == addr[0]:
-            data = json.loads(data.decode().replace("\0", ""))
+            data = json.loads(data.decode('iso-8859-1').replace("\0", ""))
             if not self._on_received.cancelled():
                 self._on_received.set_result(data)
 
