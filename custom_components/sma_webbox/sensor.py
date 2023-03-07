@@ -10,17 +10,15 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    ELECTRIC_CURRENT_AMPERE,
-    ELECTRIC_POTENTIAL_VOLT,
-    ENERGY_KILO_WATT_HOUR,
-    FREQUENCY_HERTZ,
-    POWER_WATT,
-    TIME_HOURS,
-    TEMP_CELSIUS,
-    TEMP_KELVIN,
-    TEMP_FAHRENHEIT,
-    ILLUMINANCE,
-    WIND_SPEED,
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
+    UnitOfEnergy,
+    UnitOfFrequency,
+    UnitOfPower,
+    UnitOfTime,
+    UnitOfTemperature,
+    UnitOfIrradiance,
+    UnitOfSpeed,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
@@ -151,47 +149,47 @@ class SMAWebboxSensor(CoordinatorEntity, SensorEntity):
     def set_sensor_attributes(self, unit) -> None:
         """Define HA sensor attributes based on webbox units."""
         if unit == WEBBOX_UNIT_AMPERE:
-            self._attr_unit_of_measurement = ELECTRIC_CURRENT_AMPERE
+            self._attr_unit_of_measurement = UnitOfElectricCurrent.AMPERE
             self._attr_state_class = SensorStateClass.MEASUREMENT
             self._attr_device_class = SensorDeviceClass.CURRENT
         elif unit == WEBBOX_UNIT_VOLT:
-            self._attr_unit_of_measurement = ELECTRIC_POTENTIAL_VOLT
+            self._attr_unit_of_measurement = UnitOfElectricPotential.VOLT
             self._attr_state_class = SensorStateClass.MEASUREMENT
             self._attr_device_class = SensorDeviceClass.VOLTAGE
         elif unit == WEBBOX_UNIT_HERTZ:
-            self._attr_unit_of_measurement = FREQUENCY_HERTZ
+            self._attr_unit_of_measurement = UnitOfFrequency.HERTZ
             self._attr_state_class = SensorStateClass.MEASUREMENT
             self._attr_device_class = SensorDeviceClass.FREQUENCY
         elif unit == WEBBOX_UNIT_WATT:
-            self._attr_unit_of_measurement = POWER_WATT
+            self._attr_unit_of_measurement = UnitOfPower.WATT
             self._attr_state_class = SensorStateClass.MEASUREMENT
             self._attr_device_class = SensorDeviceClass.POWER
         elif unit == WEBBOX_UNIT_KILO_WATT_HOUR:
-            self._attr_unit_of_measurement = ENERGY_KILO_WATT_HOUR
+            self._attr_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
             self._attr_state_class = SensorStateClass.TOTAL_INCREASING
             self._attr_device_class = SensorDeviceClass.ENERGY
         elif unit == WEBBOX_UNIT_HOURS:
-            self._attr_unit_of_measurement = TIME_HOURS
+            self._attr_unit_of_measurement = UnitOfTime.HOURS
             self._attr_state_class = SensorStateClass.TOTAL_INCREASING
             self._attr_device_class = SensorDeviceClass.DURATION
         elif unit == WEBBOX_UNIT_TEMP_CELSIUS:
-            self._attr_unit_of_measurement = TEMP_CELSIUS
+            self._attr_unit_of_measurement = UnitOfTemperature.CELSIUS
             self._attr_state_class = SensorStateClass.MEASUREMENT
             self._attr_device_class = SensorDeviceClass.TEMPERATURE
         elif unit == WEBBOX_UNIT_TEMP_KELVIN:
-            self._attr_unit_of_measurement = TEMP_KELVIN
+            self._attr_unit_of_measurement = UnitOfTemperature.KELVIN
             self._attr_state_class = SensorStateClass.MEASUREMENT
             self._attr_device_class = SensorDeviceClass.TEMPERATURE
         elif unit == WEBBOX_UNIT_TEMP_FAHRENHEIT:
-            self._attr_unit_of_measurement = TEMP_FAHRENHEIT
+            self._attr_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
             self._attr_state_class = SensorStateClass.MEASUREMENT
             self._attr_device_class = SensorDeviceClass.TEMPERATURE
         elif unit == WEBBOX_UNIT_WATTS_PER_SQUARE_METER:
-            self._attr_unit_of_measurement = ILLUMINANCE
+            self._attr_unit_of_measurement = UnitOfIrradiance.WATTS_PER_SQUARE_METER
             self._attr_state_class = SensorStateClass.MEASUREMENT
-            self._attr_device_class = SensorDeviceClass.ILLUMINANCE
+            self._attr_device_class = SensorDeviceClass.IRRADIANCE
         elif unit == WEBBOX_UNIT_METERS_PER_SECOND:
-            self._attr_unit_of_measurement = WIND_SPEED
+            self._attr_unit_of_measurement = UnitOfSpeed.METERS_PER_SECOND
             self._attr_state_class = SensorStateClass.MEASUREMENT
             self._attr_device_class = SensorDeviceClass.WIND_SPEED
         elif unit == WEBBOX_UNIT_OHMS:
