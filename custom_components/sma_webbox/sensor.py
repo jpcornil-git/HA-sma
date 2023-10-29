@@ -49,6 +49,7 @@ from .sma_webbox import (
     WEBBOX_UNIT_TEMP_FAHRENHEIT,
     WEBBOX_UNIT_WATTS_PER_SQUARE_METER,
     WEBBOX_UNIT_METERS_PER_SECOND,
+    WEBBOX_UNIT_KILOMETERS_PER_HOUR,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -190,6 +191,10 @@ class SMAWebboxSensor(CoordinatorEntity, SensorEntity):
             self._attr_device_class = SensorDeviceClass.IRRADIANCE
         elif unit == WEBBOX_UNIT_METERS_PER_SECOND:
             self._attr_unit_of_measurement = UnitOfSpeed.METERS_PER_SECOND
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+            self._attr_device_class = SensorDeviceClass.WIND_SPEED
+        elif unit == WEBBOX_UNIT_KILOMETERS_PER_HOUR:
+            self._attr_unit_of_measurement = UnitOfSpeed.KILOMETERS_PER_HOUR
             self._attr_state_class = SensorStateClass.MEASUREMENT
             self._attr_device_class = SensorDeviceClass.WIND_SPEED
         elif unit == WEBBOX_UNIT_OHMS:
