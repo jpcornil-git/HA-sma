@@ -4,8 +4,8 @@ SMA Sunny Webbox integration for Home Assistant
 ![webbox](https://user-images.githubusercontent.com/40644331/149579494-a5604e3b-8070-4c93-9a84-002c93e80e79.png)
 
 **Note**: Tested against:
-- Sunny WebBox-20 running FW 01.05.08.R (using a Bluetooth connection with the inverter)
-- Sunny WebBox-G1 running FW 01.52 (using RS-485 connection with the inverter)
+- Sunny WebBox-20 (FW 01.05.08.R) using a Bluetooth connection with the inverter.
+- Sunny WebBox-G1 (FW 01.52) and G2 (FW 01.53) using RS-485 connection with the inverter.
 
 ## Highlights of what it does offer
 
