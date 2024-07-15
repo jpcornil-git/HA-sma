@@ -134,7 +134,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         SMA_WEBBOX_REMOVE_LISTENER: remove_stop_listener,
     }
 
-    await hass.config_entries.async_forward_entry_setup(entry, Platform.SENSOR)
+    await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
 
     return True
 
