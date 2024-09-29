@@ -1,6 +1,6 @@
 """SMA Webbox component entry point."""
 import logging
-from asyncio import DatagramProtocol, DatagramTransport
+import asyncio
 from datetime import timedelta
 from typing import Tuple
 
@@ -20,25 +20,24 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 
-from .const import (
-    DEFAULT_SCAN_INTERVAL,
-    DOMAIN,
-    SMA_WEBBOX_COORDINATOR,
-    SMA_WEBBOX_PROTOCOL,
-    SMA_WEBBOX_REMOVE_LISTENER,
-)
+from .const import *
+
 from .sma_webbox import (
+    WEBBOX_PORT,
     SmaWebboxBadResponseException,
     SmaWebboxConnectionException,
     SmaWebboxTimeoutException,
     WebboxClientProtocol,
+    WebboxClientInstance,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType):
-    """Initiate a configflow from a configuration.yaml entry if any."""
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Setup component."""
+
+    # Initiate a configflow from a configuration.yaml entry if any.
     if DOMAIN in config:
         _LOGGER.info("Setting up %s component from configuration.yaml", DOMAIN)
         hass.async_create_task(
@@ -52,35 +51,67 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
     return True
 
 
-async def async_setup_connection(
+async def async_setup_api(hass: HomeAssistant) -> asyncio.DatagramProtocol:
+    """Setup api (udp connection) proxy."""
+
+    try:
+        api = hass.data[DOMAIN][SMA_WEBBOX_API]
+    except KeyError:
+        # Create UDP client proxy
+        on_connected = hass.loop.create_future()
+        _, api = await hass.loop.create_datagram_endpoint(
+            lambda: WebboxClientProtocol(on_connected),
+            local_addr=("0.0.0.0", WEBBOX_PORT),
+            reuse_port=True,
+        )
+
+        # Wait for socket ready signal
+        try:
+            await asyncio.wait_for(
+                on_connected, timeout=10
+            )
+        except TimeoutError:
+            _LOGGER.error(
+                "Unable to setup UDP client for port %d", WEBBOX_PORT)
+
+        # Initialize domain data structure
+        hass.data[DOMAIN] = {SMA_WEBBOX_API: api}
+        _LOGGER.info("%s API created", DOMAIN)
+
+        # Close asyncio protocol on shutdown
+        async def async_close_api(event):  # pylint: disable=unused-argument
+            """Close the transport/protocol."""
+            api.close()
+
+        # TODO: close API upon component removal ?  pylint: disable=fixme
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, async_close_api)
+
+    return api
+
+
+async def async_setup_instance(
     hass: HomeAssistant, ip_address: str, udp_port: int
-) -> Tuple[DatagramTransport, DatagramProtocol]:
+) -> WebboxClientInstance:
+
+    api = await async_setup_api(hass)
+
     """Open a connection to the webbox and build device model."""
-    transport, protocol = await hass.loop.create_datagram_endpoint(
-        lambda: WebboxClientProtocol(hass.loop, (ip_address, udp_port)),
-        local_addr=("0.0.0.0", udp_port),
-        reuse_port=True,
+    instance = WebboxClientInstance(
+        hass.loop,
+        api,
+        (ip_address, udp_port)
     )
-
-    # Wait for socket ready signal
-    await protocol.on_connected
     # Build webbox model (fetch device tree)
-    await protocol.create_webbox_model()
+    await instance.create_webbox_model()
 
-    return (transport, protocol)
+    return instance
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up sma webbox from a config entry."""
-    _LOGGER.info(
-        "SMA Webbox instance created(%s:%d)",
-        entry.data[CONF_IP_ADDRESS],
-        entry.data[CONF_PORT],
-    )
-
     # Setup connection
     try:
-        transport, protocol = await async_setup_connection(
+        instance = await async_setup_instance(
             hass, entry.data[CONF_IP_ADDRESS], entry.data[CONF_PORT]
         )
     except (OSError, SmaWebboxConnectionException) as exc:
@@ -90,7 +121,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def async_update_data():
         """Update SMA webbox sensors."""
         try:
-            await protocol.fetch_webbox_data()
+            await instance.fetch_webbox_data()
         except (
             SmaWebboxBadResponseException,
             SmaWebboxTimeoutException,
@@ -111,28 +142,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     # Try to fetch initial data, bail out otherwise
-    try:
-        await coordinator.async_config_entry_first_refresh()
-    except ConfigEntryNotReady:
-        transport.close()
-        raise
-
-    # Close asyncio protocol on shutdown
-    async def async_close_session(event):  # pylint: disable=unused-argument
-        """Close the protocol."""
-        transport.close()
-
-    remove_stop_listener = hass.bus.async_listen_once(
-        EVENT_HOMEASSISTANT_STOP, async_close_session
-    )
+    await coordinator.async_config_entry_first_refresh()
 
     # Expose data required by coordinated entities
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {
-        SMA_WEBBOX_PROTOCOL: protocol,
+    hass.data[DOMAIN].setdefault(SMA_WEBBOX_ENTRIES, {})
+    hass.data[DOMAIN][SMA_WEBBOX_ENTRIES][entry.entry_id] = {
+        SMA_WEBBOX_INSTANCE: instance,
         SMA_WEBBOX_COORDINATOR: coordinator,
-        SMA_WEBBOX_REMOVE_LISTENER: remove_stop_listener,
     }
+
+    _LOGGER.info(
+        "SMA Webbox instance created (%s:%d)",
+        entry.data[CONF_IP_ADDRESS],
+        entry.data[CONF_PORT],
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
 
@@ -145,9 +168,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry, [Platform.SENSOR]
     )
     if unload_ok:
-        data = hass.data[DOMAIN].pop(entry.entry_id)
-        data[SMA_WEBBOX_PROTOCOL].transport.close()
-        data[SMA_WEBBOX_REMOVE_LISTENER]()
+        hass.data[DOMAIN][SMA_WEBBOX_ENTRIES].pop(entry.entry_id)
 
         _LOGGER.info(
             "SMA Webbox instance unloaded(%s:%d)",

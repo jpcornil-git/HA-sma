@@ -11,7 +11,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT, CONF_SCAN_INTERVAL
 from homeassistant.data_entry_flow import FlowResult
 
-from . import async_setup_connection
+from . import async_setup_instance
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
 from .sma_webbox import WEBBOX_PORT, SmaWebboxConnectionException
 
@@ -108,12 +108,11 @@ class SmaWebboxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # Verify ip address format
                 ip_address(user_input[CONF_IP_ADDRESS])
                 # Try to connect to check ip:port correctness
-                transport,_ = await async_setup_connection(
+                await async_setup_instance(
                     self.hass,
                     user_input[CONF_IP_ADDRESS],
                     user_input[CONF_PORT],
                 )
-                transport.close()
             except ValueError:
                 errors["base"] = "invalid_host"
             except SmaWebboxConnectionException:

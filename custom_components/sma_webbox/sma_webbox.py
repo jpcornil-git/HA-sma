@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 import time
-from asyncio import DatagramTransport, Future
+from asyncio import DatagramTransport, DatagramProtocol, Future
 from asyncio.events import AbstractEventLoop
 from typing import Tuple
 
@@ -73,6 +73,75 @@ def update_channel_values(
             current_channel_values[key] = channel_value
 
 
+# - UDP client class ------------------------------------------------------------
+class WebboxClientProtocol:
+    """Webbox multi-client UDP protocol implementation"""
+
+    def __init__(self, on_connected: Future) -> None:
+        """Instance parameter initialisation."""
+        self._transport: DatagramTransport = None
+        self._on_connected = on_connected
+        self._outstanding_requests = {}
+
+    @property
+    def is_connected(self) -> bool:
+        """Return True aslong as connection is alive."""
+        return self._on_connected.done()
+
+    def close(self):
+        """Close transport (and protocol) layer"""
+        if self._transport:
+            self._transport.close()
+
+    def request(self, request: str, remote_addr: Tuple[str, int], reply: Future) -> None:
+        """Send request message to remote address"""
+        if remote_addr[0] in self._outstanding_requests:
+            _LOGGER.warning("Outstanding request exists for %s (removed)", remote_addr[0])
+        if self._transport:
+            if not self._transport.is_closing():
+                self._outstanding_requests[remote_addr[0]] = reply
+                self._transport.sendto(request.encode(), remote_addr)
+        else:
+            _LOGGER.warning(
+                "Request for %s ignored (missing transport layer)",
+                self._outstanding_requests[remote_addr[0]]
+            )
+
+    def request_cancel(self, remote_addr: Tuple[str, int]) -> None:
+        """Cancel outstanding request to remote address"""
+        if remote_addr[0] in self._outstanding_requests:
+            if not self._outstanding_requests[remote_addr[0]].cancelled():
+                self._outstanding_requests[remote_addr[0]].cancel()
+            del self._outstanding_requests[remote_addr[0]]
+
+    # - Base and Datagram protocols methods -----------------------------------
+    def connection_made(self, transport: DatagramTransport) -> None:
+        """Store transport object and release _on_connected future."""
+        _LOGGER.info("WebboxClientProtocol created")
+        self._transport = transport
+        self._on_connected.set_result(True)
+
+    def datagram_received(self, data: bytes, remote_addr: Tuple[str, int]) -> None:
+        """Return Webbox response to rpc caller by releasing corresponding future."""
+        if remote_addr[0] in self._outstanding_requests:
+            data = json.loads(data.decode('iso-8859-1').replace("\0", ""))
+            if not self._outstanding_requests[remote_addr[0]].cancelled():
+                self._outstanding_requests[remote_addr[0]].set_result(data)
+            del self._outstanding_requests[remote_addr[0]]
+
+    def error_received(self, exc: Exception) -> None:
+        """Close connection upon unexpected errors."""
+        _LOGGER.warning("Closing connection (Error received: %s)", exc)
+        self.close()
+
+    def connection_lost(
+        self, exc: Exception
+    ) -> None:  # pylint: disable=unused-argument
+        """Destroy _onconnected future to reset is_connected."""
+        _LOGGER.info("WebboxClientProtocol closed (%s)", exc)
+        self._outstanding_requests = {}
+
+
 # - Main class exceptions -----------------------------------------------------
 class SmaWebboxException(Exception):
     """Base exception of the sma_webbox library."""
@@ -91,22 +160,23 @@ class SmaWebboxConnectionException(SmaWebboxException):
 
 
 # - Main class implementation -------------------------------------------------
-class WebboxClientProtocol:  # pylint: disable=too-many-instance-attributes
+class WebboxClientInstance:  # pylint: disable=too-many-instance-attributes
     """Webbox RPC Client implementation."""
 
-    def __init__(self, loop: AbstractEventLoop, addr: Tuple[str, int]) -> None:
+    def __init__(
+        self,
+        loop: AbstractEventLoop,
+        api: DatagramProtocol,
+        addr: Tuple[str, int]
+    ) -> None:
         """Instance parameter initialisation."""
         self._loop: AbstractEventLoop = loop
         self._addr: Tuple[str, int] = addr
+        self._api: DatagramProtocol = api
 
-        self._transport: DatagramTransport = None
         self._request_id: int = 0
         self._last_access_time: float = 0
         self._data_cache: dict = {}
-
-        # Synchronization objects
-        self._on_received: Future = None
-        self._on_connected: Future = self._loop.create_future()
 
     @property
     def addr(self) -> Tuple[str, int]:
@@ -117,47 +187,6 @@ class WebboxClientProtocol:  # pylint: disable=too-many-instance-attributes
     def data(self) -> dict:
         """Return webbox data cache."""
         return self._data_cache
-
-    @property
-    def transport(self) -> dict:
-        """Return instance's DatagramTransport object."""
-        return self._transport
-
-    @property
-    def on_connected(self) -> Future:
-        """Return Future to await on while waiting for an UDP socket."""
-        return self._on_connected
-
-    @property
-    def is_connected(self) -> bool:
-        """Return True aslong as connection is alive."""
-        return self._on_connected.done() if self._on_connected else False
-
-    # - Base and Datagram protocols methods -----------------------------------
-    def connection_made(self, transport: DatagramTransport) -> None:
-        """Store transport object and release _on_connected future."""
-        _LOGGER.info("UDP protocol created")
-        self._transport = transport
-        self._on_connected.set_result(True)
-
-    def datagram_received(self, data: bytes, addr: Tuple[str, int]) -> None:
-        """Return Webbox response to rpc caller using future."""
-        if self._addr[0] == addr[0]:
-            data = json.loads(data.decode('iso-8859-1').replace("\0", ""))
-            if not self._on_received.cancelled():
-                self._on_received.set_result(data)
-
-    def error_received(self, exc: Exception) -> None:
-        """Close connection upon unexpected errors."""
-        _LOGGER.warning("Error received: {%s}, closing", exc)
-        self._transport.close()
-
-    def connection_lost(
-        self, exc: Exception
-    ) -> None:  # pylint: disable=unused-argument
-        """Destroy _onconnected future to reset is_connected."""
-        _LOGGER.info("UDP protocol closed")
-        self._on_connected = None
 
     # - SMA Webbox RPC API ----------------------------------------------------
     async def get_plant_overview(self) -> dict:
@@ -221,19 +250,19 @@ class WebboxClientProtocol:  # pylint: disable=too-many-instance-attributes
         request_id, payload = request
 
         # Send RPC/UDP request to SMA Webbox
-        _LOGGER.debug(payload)
-        self._transport.sendto(payload.encode(), self._addr)
+        _LOGGER.debug("%s:%d request %s", *self._addr, payload)
+        on_received = self._loop.create_future()
+        self._api.request(payload, self._addr, on_received)
 
         # Wait for response from SMA Webbox
-        self._on_received = self._loop.create_future()
         try:
             response = await asyncio.wait_for(
-                self._on_received, timeout=WEBBOX_TIMEOUT
+                on_received, timeout=WEBBOX_TIMEOUT
             )
-            _LOGGER.debug(response)
+            _LOGGER.debug("%s:%d reply: %s", *self._addr, response)
         except asyncio.TimeoutError:
-            _LOGGER.warning("RPC request timed out")
-            self._on_received.cancel()
+            _LOGGER.warning("RPC request to %s timed out", self._addr[0])
+            self._api.request_cancel(self._addr)
             raise SmaWebboxTimeoutException("RPC request timed out") from None
 
         # Raise exception upon errored response or id mismatch
@@ -306,9 +335,8 @@ class WebboxClientProtocol:  # pylint: disable=too-many-instance-attributes
             self._data_cache = {**self._data_cache, **response}
         except Exception as ex:
             # Error while building webbox model
-            self._transport.close()
             raise SmaWebboxConnectionException(
-                f"Unable to create SMA Webbox model from device at"
+                f"Unable to create SMA Webbox model from device at "
                 f"{self._addr[0]}:{self._addr[1]} ({ex})"
             ) from ex
 
@@ -388,31 +416,34 @@ if __name__ == "__main__":
         _LOGGER.info("Starting SMA Webbox component")
 
         loop = asyncio.get_running_loop()
+        on_connected = loop.create_future()
 
         try:
             # Create an UDP socket listening on port WEBBOX_PORT
             # and from any interface
-            _, protocol = await loop.create_datagram_endpoint(
-                lambda: WebboxClientProtocol(loop, (url, WEBBOX_PORT)),
+            _, api = await loop.create_datagram_endpoint(
+                lambda: WebboxClientProtocol(on_connected),
                 local_addr=("0.0.0.0", WEBBOX_PORT),
                 reuse_port=True,
             )
 
             # Wait for socket ready signal
-            await protocol.on_connected
+            await on_connected
+
+            instance = WebboxClientInstance(loop, api, (url, WEBBOX_PORT))
             # Build webbox model (fetch device tree)
-            await protocol.create_webbox_model()
+            await instance.create_webbox_model()
 
             # Loop until connection lost or user
-            while protocol.is_connected:
+            while api.is_connected:
                 try:
-                    await protocol.fetch_webbox_data()
+                    await instance.fetch_webbox_data()
                 except SmaWebboxTimeoutException as ex:
                     _LOGGER.warning(ex)
                 except SmaWebboxBadResponseException as ex:
                     _LOGGER.warning(ex)
 
-                print_webbox_info(protocol.data)
+                print_webbox_info(instance.data)
 
                 await asyncio.sleep(30)
         except SmaWebboxConnectionException as ex:

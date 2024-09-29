@@ -5,6 +5,7 @@ DOMAIN = "sma_webbox"
 DEFAULT_SCAN_INTERVAL = 30  # seconds
 
 # DOMAIN dict entries
-SMA_WEBBOX_PROTOCOL = "protocol"
+SMA_WEBBOX_API = "api"
+SMA_WEBBOX_ENTRIES = "entries"
+SMA_WEBBOX_INSTANCE = "instance"
 SMA_WEBBOX_COORDINATOR = "coordinator"
-SMA_WEBBOX_REMOVE_LISTENER = "remove_listener"

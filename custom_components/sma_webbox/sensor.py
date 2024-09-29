@@ -29,7 +29,7 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 
-from .const import DOMAIN, SMA_WEBBOX_COORDINATOR, SMA_WEBBOX_PROTOCOL
+from .const import DOMAIN, SMA_WEBBOX_ENTRIES, SMA_WEBBOX_COORDINATOR, SMA_WEBBOX_INSTANCE
 from .sma_webbox import (
     WEBBOX_CHANNEL_VALUES,
     WEBBOX_REP_DEVICE_NAME,
@@ -61,15 +61,15 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up SMA Webbox sensors."""
-    sma_webbox = hass.data[DOMAIN][config_entry.entry_id]
+    sma_webbox = hass.data[DOMAIN][SMA_WEBBOX_ENTRIES][config_entry.entry_id]
 
-    protocol = sma_webbox[SMA_WEBBOX_PROTOCOL]
+    instance = sma_webbox[SMA_WEBBOX_INSTANCE]
     coordinator = sma_webbox[SMA_WEBBOX_COORDINATOR]
 
     _LOGGER.info(
         "Creating sensors for %s:%d %s integration",
-        protocol.addr[0],
-        protocol.addr[1],
+        instance.addr[0],
+        instance.addr[1],
         DOMAIN,
     )
 
@@ -78,18 +78,18 @@ async def async_setup_entry(
     device_id = 0
     # Create DeviceInfo for webbox 'plant'
     device_info = DeviceInfo(
-        configuration_url=f"http://{protocol.addr[0]}",
+        configuration_url=f"http://{instance.addr[0]}",
         identifiers={(DOMAIN, config_entry.entry_id)},
         manufacturer="SMA",
         model="Webbox",
-        name=f"{DOMAIN}[{device_id}]:My Plant",
+        name=f"{DOMAIN}[{instance.addr[0]}:{device_id}]:My Plant",
     )
 
     # Add sensors from PlantOverview
-    for name, data_dict in protocol.data[WEBBOX_REP_OVERVIEW].items():
+    for name, data_dict in instance.data[WEBBOX_REP_OVERVIEW].items():
         entities.append(
             SMAWebboxSensor(
-                f"{DOMAIN}_{device_id}_{name}",
+                f"{DOMAIN}_{instance.addr[0]}_{device_id}_{name}",
                 data_dict,
                 coordinator,
                 config_entry.unique_id,
@@ -99,21 +99,21 @@ async def async_setup_entry(
 
     # Add sensors from device list
     # TODO: Handle hierarchy ('children' nodes) pylint: disable=fixme
-    for device in protocol.data[WEBBOX_REP_DEVICES]:
+    for device in instance.data[WEBBOX_REP_DEVICES]:
         device_id += 1
         # Create DeviceInfo for each webbox device
         device_info = DeviceInfo(
-            configuration_url=f"http://{protocol.addr[0]}",
+            configuration_url=f"http://{instance.addr[0]}",
             identifiers={(DOMAIN, device[WEBBOX_REP_DEVICE_NAME])},
             manufacturer="SMA",
             model="Webbox",
-            name=f"{DOMAIN}[{device_id}]:{device[WEBBOX_REP_DEVICE_NAME]}",
+            name=f"{DOMAIN}[{instance.addr[0]}:{device_id}]:{device[WEBBOX_REP_DEVICE_NAME]}",
             via_device=(DOMAIN, config_entry.entry_id),
         )
         for name, data_dict in device[WEBBOX_CHANNEL_VALUES].items():
             entities.append(
                 SMAWebboxSensor(
-                    f"{DOMAIN}_{device_id}_{name}",
+                    f"{DOMAIN}_{instance.addr[0]}_{device_id}_{name}",
                     data_dict,
                     coordinator,
                     config_entry.unique_id,
@@ -127,7 +127,7 @@ async def async_setup_entry(
 class SMAWebboxSensor(CoordinatorEntity, SensorEntity):
     """Representation of a SMA Webbox sensor."""
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(# pylint: disable=too-many-arguments too-many-positional-arguments
         self,
         name: str,
         data: dict,
@@ -147,7 +147,7 @@ class SMAWebboxSensor(CoordinatorEntity, SensorEntity):
         if WEBBOX_REP_VALUE_UNIT in self._data:
             self.set_sensor_attributes(self._data[WEBBOX_REP_VALUE_UNIT])
 
-    def set_sensor_attributes(self, unit) -> None:
+    def set_sensor_attributes(self, unit) -> None: # pylint: disable= too-many-branches too-many-statements
         """Define HA sensor attributes based on webbox units."""
         if unit == WEBBOX_UNIT_AMPERE:
             self._attr_unit_of_measurement = UnitOfElectricCurrent.AMPERE
