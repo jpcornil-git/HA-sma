@@ -1,0 +1,24 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Gerät schon konfiguriert",
+      "already_in_progress": "Konfiguration schon im Gang"
+    },
+    "error": {
+      "invalid_host": "Ungültige IP Addresse",
+      "cannot_connect": "keine Verbindung möglich",
+      "unknown": "Unerwarteter Fehler"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "ip_address": "IP Addresse",
+          "port": "UDP port",
+          "scan_interval": "Aktualisierungsinterval (Sekunden)"
+        },
+        "description": "Kommunikationsparameter.",
+        "title": "SMA WebBox Einrichtung"
+      }
+    }
+  }
+}
