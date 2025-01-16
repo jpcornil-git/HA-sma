@@ -215,7 +215,7 @@ class SMAWebboxSensor(CoordinatorEntity, SensorEntity):
         """Return the state of the sensor."""
         value = self._data[WEBBOX_REP_VALUE_VALUE]
         try:
-            if self._attr_unit_of_measurement:
+            if hasattr(self, '_attr_state_class'):
                 value = float(value)
         except ValueError:
             value = None
