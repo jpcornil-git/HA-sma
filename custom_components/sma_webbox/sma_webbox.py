@@ -9,7 +9,7 @@ from asyncio.events import AbstractEventLoop
 from typing import Tuple
 
 WEBBOX_PORT = 34268
-WEBBOX_TIMEOUT = 5
+WEBBOX_TIMEOUT = 15
 
 WEBBOX_RPC_INTERVAL = 1  # seconds (manual says 30s between two 'queries' ...)
 
