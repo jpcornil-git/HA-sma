@@ -20,5 +20,17 @@
         "title": "Configurer la WebBox SMA"
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Intervalle de mise à jour (secondes)",
+          "timeout": "Délai d'attente pour une réponse (secondes)"
+        },
+        "description": "Modifier les paramètres de communication.",
+        "title": "Options de la WebBox SMA"
+      }
+    }
   }
 }

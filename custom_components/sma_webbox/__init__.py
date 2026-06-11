@@ -9,6 +9,7 @@ from homeassistant.const import (
     CONF_IP_ADDRESS,
     CONF_PORT,
     CONF_SCAN_INTERVAL,
+    CONF_TIMEOUT,
     EVENT_HOMEASSISTANT_STOP,
     Platform,
 )
@@ -24,6 +25,7 @@ from .const import *
 
 from .sma_webbox import (
     WEBBOX_PORT,
+    WEBBOX_TIMEOUT,
     SmaWebboxBadResponseException,
     SmaWebboxConnectionException,
     SmaWebboxTimeoutException,
@@ -90,16 +92,17 @@ async def async_setup_api(hass: HomeAssistant) -> asyncio.DatagramProtocol:
 
 
 async def async_setup_instance(
-    hass: HomeAssistant, ip_address: str, udp_port: int
+    hass: HomeAssistant, ip_address: str, udp_port: int, timeout: int = WEBBOX_TIMEOUT
 ) -> WebboxClientInstance:
+    """Open a connection to the webbox and build device model."""
 
     api = await async_setup_api(hass)
 
-    """Open a connection to the webbox and build device model."""
     instance = WebboxClientInstance(
         hass.loop,
         api,
-        (ip_address, udp_port)
+        (ip_address, udp_port),
+        timeout,
     )
     # Build webbox model (fetch device tree)
     await instance.create_webbox_model()
@@ -109,10 +112,13 @@ async def async_setup_instance(
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up sma webbox from a config entry."""
+    # Get timeout from options (falling back to data if not set, or default)
+    timeout = entry.options.get(CONF_TIMEOUT, entry.data.get(CONF_TIMEOUT, WEBBOX_TIMEOUT))
+
     # Setup connection
     try:
         instance = await async_setup_instance(
-            hass, entry.data[CONF_IP_ADDRESS], entry.data[CONF_PORT]
+            hass, entry.data[CONF_IP_ADDRESS], entry.data[CONF_PORT], timeout
         )
     except (OSError, SmaWebboxConnectionException) as exc:
         raise ConfigEntryNotReady from exc
@@ -128,9 +134,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ) as exc:
             raise UpdateFailed(exc) from exc
 
-    # TODO: Move scan_interval to options ?  pylint: disable=fixme
     interval = timedelta(
-        seconds=entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        seconds=entry.options.get(
+            CONF_SCAN_INTERVAL, entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        )
     )
 
     coordinator = DataUpdateCoordinator(
@@ -157,9 +164,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.data[CONF_PORT],
     )
 
+    # Listen for options changes
+    entry.async_on_unload(entry.add_update_listener(update_listener))
+
     await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
 
     return True
+
+
+async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle options update."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

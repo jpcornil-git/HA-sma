@@ -54,6 +54,9 @@ sma_webbox:
 
 ```
 
+Some webbox models may be slow to respond and require a longer timeout than the default value (5 seconds).
+If you see timeout exceptions in your system logs, you can increase this timeout in the entity's configuration interface (gear icon).
+
 ## sma_webbox.py
 
 This script implements the main object used by HomeAssistant but can also be used as an independent script to:
