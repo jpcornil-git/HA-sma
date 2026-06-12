@@ -20,5 +20,17 @@
         "title": "SMA WebBox setup"
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Update interval (seconds)",
+          "timeout": "Response timeout (seconds)"
+        },
+        "description": "Modify communication parameters.",
+        "title": "SMA WebBox options"
+      }
+    }
   }
 }

@@ -167,12 +167,14 @@ class WebboxClientInstance:  # pylint: disable=too-many-instance-attributes
         self,
         loop: AbstractEventLoop,
         api: DatagramProtocol,
-        addr: Tuple[str, int]
+        addr: Tuple[str, int],
+        timeout: int = WEBBOX_TIMEOUT
     ) -> None:
         """Instance parameter initialisation."""
         self._loop: AbstractEventLoop = loop
         self._addr: Tuple[str, int] = addr
         self._api: DatagramProtocol = api
+        self._timeout: int = timeout
 
         self._request_id: int = 0
         self._last_access_time: float = 0
@@ -257,7 +259,7 @@ class WebboxClientInstance:  # pylint: disable=too-many-instance-attributes
         # Wait for response from SMA Webbox
         try:
             response = await asyncio.wait_for(
-                on_received, timeout=WEBBOX_TIMEOUT
+                on_received, timeout=self._timeout
             )
             _LOGGER.debug("%s:%d reply: %s", *self._addr, response)
         except asyncio.TimeoutError:

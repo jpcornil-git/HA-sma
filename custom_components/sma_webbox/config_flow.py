@@ -8,12 +8,13 @@ from typing import Any
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT, CONF_SCAN_INTERVAL
+from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT, CONF_SCAN_INTERVAL, CONF_TIMEOUT
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
 from . import async_setup_instance
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
-from .sma_webbox import WEBBOX_PORT, SmaWebboxConnectionException
+from .sma_webbox import WEBBOX_PORT, WEBBOX_TIMEOUT, SmaWebboxConnectionException
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ class SmaWebboxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_import(self, user_input=None):
         """Update or create a new component from configuration.yaml."""
         # Parameter validation
-        try:
+        try:    
             # Validate configuration data format and add default values
             self._data = COMPONENT_SCHEMA(user_input)
             # Verify ip address format
@@ -151,4 +152,42 @@ class SmaWebboxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+        )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> SmaWebboxOptionsFlowHandler:
+        """Get the options flow for this handler."""
+        return SmaWebboxOptionsFlowHandler()
+
+
+class SmaWebboxOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle options flow for SMA Webbox."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage entry options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_SCAN_INTERVAL,
+                        default=self.config_entry.options.get(
+                            CONF_SCAN_INTERVAL,
+                            self.config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+                        ),
+                    ): cv.positive_int,
+                    vol.Optional(
+                        CONF_TIMEOUT,
+                        default=self.config_entry.options.get(CONF_TIMEOUT, WEBBOX_TIMEOUT),
+                    ): cv.positive_int,
+                }
+            ),
         )
