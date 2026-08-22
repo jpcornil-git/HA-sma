@@ -56,15 +56,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 async def async_setup_api(hass: HomeAssistant) -> asyncio.DatagramProtocol:
     """Setup api (udp connection) proxy."""
 
-    try:
-        api = hass.data[DOMAIN][SMA_WEBBOX_API]
-    except KeyError:
+    async with hass.data[DOMAIN][SMA_WEBBOX_API_LOCK]:
+        # Check after waiting: another entry may have initialized the API.
+        if SMA_WEBBOX_API in hass.data[DOMAIN]:
+            return hass.data[DOMAIN][SMA_WEBBOX_API]
+
         # Create UDP client proxy
         on_connected = hass.loop.create_future()
         _, api = await hass.loop.create_datagram_endpoint(
             lambda: WebboxClientProtocol(on_connected),
             local_addr=("0.0.0.0", WEBBOX_PORT),
-            reuse_port=True,
+            #reuse_port=True,
         )
 
         # Wait for socket ready signal
@@ -72,12 +74,14 @@ async def async_setup_api(hass: HomeAssistant) -> asyncio.DatagramProtocol:
             await asyncio.wait_for(
                 on_connected, timeout=10
             )
-        except TimeoutError:
-            _LOGGER.error(
-                "Unable to setup UDP client for port %d", WEBBOX_PORT)
+        except TimeoutError as exc:
+            api.close()
+            raise SmaWebboxConnectionException(
+                f"Unable to setup UDP client for port {WEBBOX_PORT}"
+            ) from exc
 
-        # Initialize domain data structure
-        hass.data[DOMAIN] = {SMA_WEBBOX_API: api}
+        # Store shared API object
+        hass.data[DOMAIN][SMA_WEBBOX_API] = api
         _LOGGER.info("%s API created", DOMAIN)
 
         # Close asyncio protocol on shutdown
@@ -85,16 +89,18 @@ async def async_setup_api(hass: HomeAssistant) -> asyncio.DatagramProtocol:
             """Close the transport/protocol."""
             api.close()
 
-        # TODO: close API upon component removal ?  pylint: disable=fixme
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, async_close_api)
 
-    return api
+        return api
 
 
 async def async_setup_instance(
     hass: HomeAssistant, ip_address: str, udp_port: int, timeout: int = WEBBOX_TIMEOUT
 ) -> WebboxClientInstance:
     """Open a connection to the webbox and build device model."""
+
+    domain_data = hass.data.setdefault(DOMAIN, {})
+    domain_data.setdefault(SMA_WEBBOX_API_LOCK, asyncio.Lock())
 
     api = await async_setup_api(hass)
 
