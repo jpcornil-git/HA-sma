@@ -21,6 +21,7 @@ from homeassistant.const import (
     UnitOfSpeed,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
@@ -97,18 +98,24 @@ async def async_setup_entry(
             )
         )
 
+    # Register the webbox plant device.
+    plant_device = device_registry.async_get(hass).async_get_or_create(
+        config_entry_id=config_entry.entry_id,
+        **device_info,
+    )
+
     # Add sensors from device list
     # TODO: Handle hierarchy ('children' nodes) pylint: disable=fixme
     for device in instance.data[WEBBOX_REP_DEVICES]:
         device_id += 1
         # Create DeviceInfo for each webbox device
         device_info = DeviceInfo(
-            configuration_url=f"http://{instance.addr[0]}",
+            configuration_url=plant_device.configuration_url,
             identifiers={(DOMAIN, device[WEBBOX_REP_DEVICE_NAME])},
-            manufacturer="SMA",
-            model="Webbox",
+            manufacturer=plant_device.manufacturer,
+            model=plant_device.model,
             name=f"{DOMAIN}[{instance.addr[0]}:{device_id}]:{device[WEBBOX_REP_DEVICE_NAME]}",
-            via_device=(DOMAIN, config_entry.entry_id),
+            via_device_id=plant_device.id,
         )
         for name, data_dict in device[WEBBOX_CHANNEL_VALUES].items():
             entities.append(
